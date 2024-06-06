@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake and Ladder Game</title>
+    <style>
+        table { border-collapse: collapse; }
+        td { width: 50px; height: 50px; text-align: center; border: 1px solid black; }
+        .snake { background-color: #FFCCCB; }  /* Light red for snakes */
+        .ladder { background-color: #CCFFCC; }  /* Light green for ladders */
+        .player { background-color: #ADD8E6; }  /* Light blue for player */
+        .cpu { background-color: #FFFF99; }     /* Light yellow for CPU */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 90vh;
+            margin: 0;
+        }
+        h2, h3 {
+            color: #333;
+        }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        table {
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        td {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            border: 1px solid black;
+        }
+        .snake {
+            background-color: #FFCCCB;  /* Light red for snakes */
+        }
+        .ladder {
+            background-color: #CCFFCC;  /* Light green for ladders */
+        }
+        .player {
+            background-color: #ADD8E6;  /* Light blue for player */
+        }
+        .cpu {
+            background-color: #FFFF99;  /* Light yellow for CPU */
+        }
+        #action-button, #logout-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #action-button:hover, #logout-button:hover {
+            background-color: #45a049;
+        }
+        #logout-button {
+            background-color: #f44336;
+        }
+        #logout-button:hover {
+            background-color: #e53935;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome, {{ session['username'] }}</h2>
+    <h3>Snake and Ladder Game</h3>
+    <div id="game-board">
+        <table id="board">
+            <!-- Game board will be generated here -->
+        </table>
+    </div>
+    <button id="action-button" onclick="playTurn()">Play Turn</button>
+    <button id="logout-button" onclick="logout()">Logout</button>
+
+    <script>
+        const snakes = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78};
+        const ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100};
+        let playerPosition = 0;
+        let cpuPosition = 0;
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            let cellNumber = 100;
+            for (let i = 0; i < 10; i++) {
+                const row = board.insertRow();
+                for (let j = 0; j < 10; j++) {
+                    const cell = row.insertCell();
+                    if (i%2==0) {
+                        cell.id = 'cell-' + cellNumber;
+                        cell.textContent = cellNumber;
+                    } else {
+                        cell.id = 'cell-' + (cellNumber - (9 - j * 2));
+                        cell.textContent = cellNumber - (9 - j * 2);
+                    }
+
+                    if (snakes[cell.textContent]) {
+                        cell.classList.add('snake');
+                    } else if (ladders[cell.textContent]) {
+                        cell.classList.add('ladder');
+                    }
+
+                    cellNumber--;
+                }
+            }
+        }
+
+        function updateBoard() {
+            document.querySelectorAll('.player').forEach(cell => cell.classList.remove('player'));
+            document.querySelectorAll('.cpu').forEach(cell => cell.classList.remove('cpu'));
+
+            document.getElementById('cell-' + playerPosition).classList.add('player');
+            document.getElementById('cell-' + cpuPosition).classList.add('cpu');
+        }
+
+        function logout() {
+            window.location.href = "{{ url_for('logout') }}";
+        }
+
+        function playTurn() {
+            const actionButton = document.getElementById('action-button');
+            if (actionButton.textContent === 'Play Again') {
+                resetGame();
+                return;
+            }
+
+            fetch('/play_turn', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                playerPosition = data.player_position;
+                cpuPosition = data.cpu_position;
+                updateBoard();
+
+                if (data.winner) {
+                    alert(`${data.winner} wins!`);
+                    actionButton.textContent = 'Play Again';
+                }
+            });
+        }
+
+        function resetGame() {
+            fetch('/reset_game',{
+                method : 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response=>response.json())
+            .then(data=>{
+                playerPosition = data.player_position;
+                cpuPosition = data.cpu_position;
+                updateBoard();
+
+            });
+            document.getElementById('action-button').textContent = 'Play Turn';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createBoard();
+            updateBoard();
+        });
+    </script>
+</body>
+</html>
